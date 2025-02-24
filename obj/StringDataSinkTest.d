@@ -1,4 +1,4 @@
-bin/testsrc/StringDataSinkTest.o: testsrc/StringDataSinkTest.cpp \
+obj/StringDataSinkTest.o: testsrc/StringDataSinkTest.cpp \
   /opt/homebrew/opt/googletest/include/gtest/gtest.h \
   /opt/homebrew/opt/googletest/include/gtest/gtest-assertion-result.h \
   /opt/homebrew/opt/googletest/include/gtest/gtest-message.h \

@@ -1,4 +1,4 @@
-bin/testsrc/StringDataSourceTest.o: testsrc/StringDataSourceTest.cpp \
+obj/XMLTest.o: testsrc/XMLTest.cpp \
   /opt/homebrew/opt/googletest/include/gtest/gtest.h \
   /opt/homebrew/opt/googletest/include/gtest/gtest-assertion-result.h \
   /opt/homebrew/opt/googletest/include/gtest/gtest-message.h \
@@ -20,7 +20,9 @@ bin/testsrc/StringDataSourceTest.o: testsrc/StringDataSourceTest.cpp \
   /opt/homebrew/opt/googletest/include/gtest/gtest-typed-test.h \
   /opt/homebrew/opt/googletest/include/gtest/gtest_pred_impl.h \
   /opt/homebrew/opt/googletest/include/gtest/gtest_prod.h \
-  include/StringDataSource.h include/DataSource.h
+  include/XMLReader.h include/XMLEntity.h include/DataSource.h \
+  include/XMLWriter.h include/DataSink.h include/StringDataSource.h \
+  include/StringDataSink.h
 
 /opt/homebrew/opt/googletest/include/gtest/gtest.h:
 
@@ -64,6 +66,16 @@ bin/testsrc/StringDataSourceTest.o: testsrc/StringDataSourceTest.cpp \
 
 /opt/homebrew/opt/googletest/include/gtest/gtest_prod.h:
 
-include/StringDataSource.h:
+include/XMLReader.h:
+
+include/XMLEntity.h:
 
 include/DataSource.h:
+
+include/XMLWriter.h:
+
+include/DataSink.h:
+
+include/StringDataSource.h:
+
+include/StringDataSink.h:
