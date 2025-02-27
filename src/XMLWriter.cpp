@@ -12,22 +12,20 @@ struct CXMLWriter::SImplementation {
 
     struct PendingElement {
         SXMLEntity entity;
-        bool flushed = false;        // Has the <tag> been written out yet?
-        bool hasElementChild = false;// Does this element contain child elements?
-        bool hasTextChild = false;   // Does this element contain text?
+        bool flushed = false;      
+        bool hasElementChild = false;
+        bool hasTextChild = false;  
     };
     std::vector<PendingElement> pendingStack;
 
     SImplementation(std::shared_ptr<CDataSink> sink)
         : dsink(std::move(sink)) {}
 
-    // Write raw string data out to the sink
     bool WriteRaw(const std::string &data) {
         std::vector<char> buffer(data.begin(), data.end());
         return dsink->Write(buffer);
     }
 
-    // Escape special characters for XML
     static std::string EscapeXML(const std::string &input) {
         std::string output;
         output.reserve(input.size());
@@ -44,39 +42,19 @@ struct CXMLWriter::SImplementation {
         return output;
     }
 
-    // ----------------------------------------------------------
-    // Decide whether we should indent before writing an element
-    // or closing tag. If the current element's parent is "osm",
-    // we skip indentation/newlines entirely.
-    // ----------------------------------------------------------
     bool ShouldIndent() const {
-        // If empty stack, no parent => we can indent if IndentLevel > 0
-        if (pendingStack.empty()) {
-            return (IndentLevel > 0);
-        }
-        // Check the parent's name
-        const PendingElement &parent = pendingStack.back();
-        if (parent.entity.DNameData == "osm") {
-            // Special-case: parent is "osm" => skip indentation
-            return false;
-        }
-        // Otherwise, normal rule: indent if IndentLevel>0
-        return (IndentLevel > 0);
+        return false; // prevent extra indent
     }
 
-    // If the top stack element is unflushed, flush it: write its opening tag
     bool FlushPending() {
         if (!pendingStack.empty() && !pendingStack.back().flushed) {
             PendingElement &pe = pendingStack.back();
-
-            // Write <tag ...> with NO newline before it
             std::string output;
             output += "<" + pe.entity.DNameData;
             for (const auto &attr : pe.entity.DAttributes) {
                 output += " " + attr.first + "=\"" + EscapeXML(attr.second) + "\"";
             }
             output += ">";
-
             if (!WriteRaw(output)) {
                 return false;
             }
@@ -86,9 +64,6 @@ struct CXMLWriter::SImplementation {
         return true;
     }
 
-    // =======================
-    // StartElement
-    // =======================
     bool WriteStartElement(const SXMLEntity &entity) {
         if (!FlushPending()) {
             return false;
@@ -102,9 +77,6 @@ struct CXMLWriter::SImplementation {
         return true;
     }
 
-    // =======================
-    // CharData
-    // =======================
     bool WriteCharData(const SXMLEntity &entity) {
         if (!FlushPending()) {
             return false;
@@ -116,50 +88,30 @@ struct CXMLWriter::SImplementation {
         return WriteRaw(escaped);
     }
 
-    // =======================
-    // CompleteElement
-    // =======================
     bool WriteCompleteElement(const SXMLEntity &entity) {
-        // Flush the parent's opening tag if needed
         if (!FlushPending()) {
             return false;
         }
-        if (!pendingStack.empty()) {
-            pendingStack.back().hasElementChild = true;
-        }
-
-        // Possibly insert newline + tabs if we're not under "osm"
         std::string output;
-        if (ShouldIndent()) {
+        if (!pendingStack.empty() && pendingStack.back().flushed && ShouldIndent()) {
             output += "\n" + std::string(IndentLevel, '\t');
         }
-
-        // Write <tag .../>
         output += "<" + entity.DNameData;
         for (const auto &attr : entity.DAttributes) {
             output += " " + attr.first + "=\"" + EscapeXML(attr.second) + "\"";
         }
         output += "/>";
-
         return WriteRaw(output);
     }
 
-    // =======================
-    // EndElement
-    // =======================
     bool WriteEndElement(const SXMLEntity &entity) {
-        // We reference entity just to fix the unused parameter warning
         (void)entity;
-
         if (pendingStack.empty()) {
             return false;
         }
         PendingElement pe = pendingStack.back();
         pendingStack.pop_back();
-
-        // If we never flushed <tag>, it means no children or text => produce <tag ...></tag>
         if (!pe.flushed) {
-            // Write the opening <tag ...> now, with NO newline (or maybe only if ShouldIndent?)
             std::string openTag;
             if (ShouldIndent()) {
                 openTag += "\n" + std::string(IndentLevel, '\t');
@@ -172,30 +124,19 @@ struct CXMLWriter::SImplementation {
             if (!WriteRaw(openTag)) {
                 return false;
             }
-
-            // We have effectively "opened" it, so Indent up then back down
             pe.flushed = true;
             IndentLevel++;
             IndentLevel--;
         }
-        else {
-            // Normal close of a flushed element
-            IndentLevel--;
-        }
-
-        // If it has child elements and we are NOT under "osm", put a newline+indent
         std::string closeTag;
         if (pe.hasElementChild && ShouldIndent()) {
             closeTag += "\n" + std::string(IndentLevel, '\t');
         }
         closeTag += "</" + pe.entity.DNameData + ">";
-
+        IndentLevel--;
         return WriteRaw(closeTag);
     }
 
-    // =======================
-    // Routing method
-    // =======================
     bool WriteEntity(const SXMLEntity &entity) {
         switch (entity.DType) {
             case SXMLEntity::EType::StartElement:
@@ -211,7 +152,6 @@ struct CXMLWriter::SImplementation {
         }
     }
 
-    // Flush any unclosed elements
     bool Flush() {
         while (!pendingStack.empty()) {
             if (!WriteEndElement(SXMLEntity())) {
